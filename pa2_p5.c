@@ -45,13 +45,15 @@ void asCNF(pCTree ctree);
 void downLevel_not(pCTree ctree);
 
 CTree not(CTree ctree) ;
+void CNF(pCTree ctree) ;
+CTree _multi(CTree a, CTree b);
 
-pModuleList asModules(pCTree pctree);
-void printModuleList(pModuleList list);
-void printModule(Module mod);
-void addAll(pModuleList list1, pModuleList list2);
-void pModule_init(pModule pModule);
-void addModule(pModuleList list, pModule module);
+void m_mult(pCTree ctree);
+
+CTree m_or(CTree a, CTree b);
+CTree m_and(CTree a, CTree b);
+
+void clone(pCTree new,pCTree tree);
 
 int main() {
 
@@ -448,6 +450,8 @@ pCTree asCTree(char* str) {
 
 void printCTree(pCTree ctree) {
 
+
+
 	enum CType type = ctree->type;
 
 	if(type == Atom) {
@@ -471,77 +475,241 @@ void asCNF(pCTree ctree) {
 	printCTree(ctree);
 	printf("\n");
 
-	
+	CNF(ctree);
 
+	printCTree(ctree);
+	printf("\n");
 }
 
-pModuleList asModules(pCTree pctree) {
+void CNF(pCTree ctree) {
+/*
+	printf("CNF: ");
+	printCTree(ctree);
+	printf("\n");
+*/
 
-	pModuleList list = malloc(sizeof(ModuleList));
-	list->modules = malloc(sizeof(Module)*1024);
-	list->size = 0;
-
-		pModule pMod;
-		pModule_init(pMod);
-
-	switch(pctree->type) {
+	switch(ctree->type) {
 
 	case Atom:
-		
-		pMod->arr[0] = pctree->n;
-		pMod->size++;
-		
-		addModule(list,pMod);
-		
-		break;
+		return;
+	case Not:
+		return;
 
 	case And:
+		for(int i = 0; i < ctree->children_cnt; i++) {
 
-		for(int i = 0; i < pctree->children_cnt; i++) {
+			CTree child = ctree->children[i];
+			CNF(&child);
+		}
+		return;
 
-			pModuleList ch = asModules(&(pctree->children[i]));
-			addAll(list,ch);
+	case Or:
+		for(int i = 0; i < ctree->children_cnt; i++) {
+
+			CTree child = ctree->children[i];
+			CNF(&child);
+		}
+		
+		m_mult(ctree);
+
+		return;
+	}
+}
+CTree** n_children;
+void m_mult(pCTree ctree) {
+	
+
+	CTree arr1[1024];
+	CTree arr2[1024];
+	CTree arr3[2048];
+	int size1 = 0, size2 = 0;
+
+	for(int i = 0; i < ctree->children_cnt; i++) {
+		CTree ch = ctree->children[i];
+		switch(ch.type) {
+		
+		case Atom:
+		case Not:
+			arr1[size1] = ch;
+			size1++;
+			break;
+			
+		case Or:
+			for(int j = 0; j < ch.children_cnt; j++) {
+				arr1[size1] = ch.children[j];
+				size1++;
+			}
+			break;
+		
+		case And:
+			arr2[size2] = ch;
+			size2++;
 		}
 
 	}
 
-	return list;
+//	printf("size1: %d, size2: %d\n",size1,size2);
 
-}
+	for(int i = 0; i < size2-1; i++) {
 
-void printModuleList(pModuleList list) {
+		// arr2[i];
+		// arr2[i+1];
 
-	for(int i = 0; i < list->size; i++) {
-
-		Module mod = list->modules[i];
-		printModule(mod);
+		arr2[i+1] = _multi(arr2[i],arr2[i+1]);
 	}
-}
-void printModule(Module mod) {
-	for(int i = 0; i < mod.size; i++) {
+
+	CTree sum = arr1[0];
+
+	for(int i = 1; i < size1; i++) {
+	
+		sum = m_or(sum,arr1[i]);
+	}
+	
+
+	CTree l1 = arr2[size2-1];
+	ctree->type = l1.type;
+	ctree->n = l1.n;
+	ctree->children_cnt = l1.children_cnt;
+	ctree->children = malloc(sizeof(CTree)*l1.children_cnt);
+	
+
+	//CTree* n_children[2048];
+	n_children = malloc(l1.children_cnt*sizeof(pCTree));
+
+	for(int i = 0; i < l1.children_cnt; i++) {
+
+		pCTree p = malloc(sizeof(CTree));
+		clone(p,&sum);
+/*
+		printf("type %d, %d\n",p->type,sum.type);
+		printf("n %d, %d\n",p->n,sum.n);
+		printf("cnt %d, %d\n",p->children_cnt,sum.children_cnt);
+		printf("child %d, %d\n",p->children,sum.children);
+*/
+
+		pCTree p2 = malloc(sizeof(CTree));
+		clone(p2,&(l1.children[i]));
+
+		CTree tr = m_or(*p2,*p);
+
 		
-		int n = mod.arr[i];
-		printf("%d ",n);
+/*
+		pCTree p;
+ 		clone(p,&tr);
+		printCTree(p);
+*/
+		n_children[i] = &tr;
+
+		printf("i: %d\n",i);
+		printf("%ld\n",n_children[i]);
+		printCTree(n_children[i]);
+		printf("\n");
 	}
+
+		
+		printf("i: %d\n",0);
+		printCTree(n_children[0]);
+		printf("\n");
+
+
+	for(int i = 0; i < l1.children_cnt; i++) {
+
+		ctree->children[i] = *n_children[i];
+/*
+		printCTree(&(ctree->children[i]));
+		printf("\n");
+*/
+	}
+/*
+	printf("CTree:\n");
+	printf("type: %d\n",ctree->type);
+	printf("n: %d\n",ctree->n);
+	printf("cnt: %d\n",ctree->children_cnt);
+
+	printCTree(&(ctree->children[0]));
 	printf("\n");
+	printCTree(&(ctree->children[1]));
+	printf("\n");
+
+	printCTree(ctree);
+	printf("\n");
+*/
 }
 
-void addAll(pModuleList list1, pModuleList list2) {
+CTree _multi(CTree a, CTree b) {
 
-	for(int i = 0; i < list2->size; i++) {
-		addModule(list1,&(list2->modules[i]));
+	int size = 0;
+
+	CTree* a_child = a.children;
+	CTree* b_child = a.children;
+
+
+	CTree children[2048];
+
+	for(int i = 0; i < a.children_cnt; i++) {
+
+		for(int j = 0; j < b.children_cnt; j++) {
+
+			CTree ntree = m_or(a_child[i],b_child[j]);
+			children[size] = ntree;
+			size++;
+		}
+	}
+
+	CTree tree = {And,0,size,children};
+	return tree;
+}
+
+CTree m_or(CTree a, CTree b) {
+
+
+	if((a.type == Or) && b.type == Or) {
+		
+		CTree children[1024];
+		int cnt = a.children_cnt + b.children_cnt;
+		int i;
+		for(i = 0; i < a.children_cnt; i++) {
+
+			children[i] = a.children[i];
+		}
+		for(int j = 0; j < b.children_cnt; j++) {
+			
+			children[i+j] = b.children[j];
+		}
+
+		CTree ans = {Or,0,cnt,children};
+		return ans;
+		
+	} else {
+		CTree children[2] = {a,b};
+		CTree ans = {Or,0,2,children};
+		return ans;
 	}
 	
 }
+CTree m_and(CTree a, CTree b) {
+	if(a.type == b.type == And) {
+		
+		CTree children[1024];
+		int cnt = a.children_cnt + b.children_cnt;
+		int i;
+		for(i = 0; i < a.children_cnt; i++) {
 
-void pModule_init(pModule pModule) {
-	pModule->arr = malloc(sizeof(int)*1024);
-	pModule->size = 0;
-}
+			children[i] = a.children[i];
+		}
+		for(int j = 0; j < b.children_cnt; j++) {
+			
+			children[i+j] = b.children[j];
+		}
 
-void addModule(pModuleList list, pModule module) {
-	list->modules[list->size] = *module;
-	list->size++;
+		CTree ans = {And,0,cnt,children};
+		return ans;
+		
+	} else {
+		CTree children[2] = {a,b};
+		CTree ans = {And,0,2,children};
+		return ans;
+	}
 }
 
 void downLevel_not(pCTree ctree) {
@@ -658,4 +826,31 @@ CTree not(CTree ctree) {
 
 
 	return new_ctree;
+}
+void clone(pCTree new,pCTree tree) {
+/*
+	printf("clone: ");
+	printCTree(tree);
+	printf("\n");
+*/
+	new->children = malloc(sizeof(CTree)*tree->children_cnt);
+
+	new->type = tree->type;
+	new->n = tree->n;
+	new->children_cnt = tree->children_cnt;
+
+
+	for(int i = 0; i < tree->children_cnt; i++) {
+
+		//new->children[i] = tree->children[i];
+		clone(&(new->children[i]),&(tree->children[i]));
+	}
+/*
+		printf("type %d, %d\n",new->type,tree->type);
+		printf("n %d, %d\n",new->n,tree->n);
+		printf("cnt %d, %d\n",new->children_cnt,tree->children_cnt);
+		printf("child %d, %d\n",new->children,tree->children);
+*/
+//	printCTree(new);
+
 }

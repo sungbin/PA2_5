@@ -17,6 +17,22 @@ struct _CTree {
 	struct _CTree *children;
 };
 
+struct _Module {
+	int* arr;
+	int size;
+};
+
+typedef struct _Module Module;
+typedef Module *pModule;
+
+struct _ModuleList {
+	Module Module;
+	int size;
+}
+
+typedef struct _ModuleList ModuleList;
+typedef ModuleList pModuleList;
+
 typedef struct _CTree CTree;
 typedef CTree *pCTree;
 
@@ -47,8 +63,6 @@ int main() {
 
 
 		asCNF(ctree);
-		printCTree(ctree);
-		printf("\n");
 
 
 	}
@@ -447,10 +461,16 @@ void printCTree(pCTree ctree) {
 }
 void asCNF(pCTree ctree) {
 
-
 	downLevel_not(ctree);
 
+	printCTree(ctree);
+	printf("\n");
+
+	
+
 }
+
+
 void downLevel_not(pCTree ctree) {
 /*
 	printf("Down: ");

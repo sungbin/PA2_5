@@ -26,12 +26,12 @@ typedef struct _Module Module;
 typedef Module *pModule;
 
 struct _ModuleList {
-	Module Module;
+	pModule modules;
 	int size;
-}
+};
 
 typedef struct _ModuleList ModuleList;
-typedef ModuleList pModuleList;
+typedef ModuleList *pModuleList;
 
 typedef struct _CTree CTree;
 typedef CTree *pCTree;
@@ -45,8 +45,13 @@ void asCNF(pCTree ctree);
 void downLevel_not(pCTree ctree);
 
 CTree not(CTree ctree) ;
-void clone(pCTree new_ctree,pCTree ctree);
 
+pModuleList asModules(pCTree pctree);
+void printModuleList(pModuleList list);
+void printModule(Module mod);
+void addAll(pModuleList list1, pModuleList list2);
+void pModule_init(pModule pModule);
+void addModule(pModuleList list, pModule module);
 
 int main() {
 
@@ -470,6 +475,74 @@ void asCNF(pCTree ctree) {
 
 }
 
+pModuleList asModules(pCTree pctree) {
+
+	pModuleList list = malloc(sizeof(ModuleList));
+	list->modules = malloc(sizeof(Module)*1024);
+	list->size = 0;
+
+		pModule pMod;
+		pModule_init(pMod);
+
+	switch(pctree->type) {
+
+	case Atom:
+		
+		pMod->arr[0] = pctree->n;
+		pMod->size++;
+		
+		addModule(list,pMod);
+		
+		break;
+
+	case And:
+
+		for(int i = 0; i < pctree->children_cnt; i++) {
+
+			pModuleList ch = asModules(&(pctree->children[i]));
+			addAll(list,ch);
+		}
+
+	}
+
+	return list;
+
+}
+
+void printModuleList(pModuleList list) {
+
+	for(int i = 0; i < list->size; i++) {
+
+		Module mod = list->modules[i];
+		printModule(mod);
+	}
+}
+void printModule(Module mod) {
+	for(int i = 0; i < mod.size; i++) {
+		
+		int n = mod.arr[i];
+		printf("%d ",n);
+	}
+	printf("\n");
+}
+
+void addAll(pModuleList list1, pModuleList list2) {
+
+	for(int i = 0; i < list2->size; i++) {
+		addModule(list1,&(list2->modules[i]));
+	}
+	
+}
+
+void pModule_init(pModule pModule) {
+	pModule->arr = malloc(sizeof(int)*1024);
+	pModule->size = 0;
+}
+
+void addModule(pModuleList list, pModule module) {
+	list->modules[list->size] = *module;
+	list->size++;
+}
 
 void downLevel_not(pCTree ctree) {
 /*

@@ -50,7 +50,7 @@ CTree _multi(CTree a, CTree b);
 
 void m_mult(pCTree ctree);
 
-CTree m_or(CTree a, CTree b);
+void m_or(pCTree new,CTree a, CTree b);
 CTree m_and(CTree a, CTree b);
 
 void clone(pCTree new,pCTree tree);
@@ -515,7 +515,7 @@ void CNF(pCTree ctree) {
 		return;
 	}
 }
-CTree** n_children;
+	CTree* n_children[2048];
 void m_mult(pCTree ctree) {
 	
 
@@ -561,8 +561,9 @@ void m_mult(pCTree ctree) {
 	CTree sum = arr1[0];
 
 	for(int i = 1; i < size1; i++) {
-	
-		sum = m_or(sum,arr1[i]);
+		pCTree p = malloc(sizeof(CTree));
+		m_or(p,sum,arr1[i]);
+		sum = *p;
 	}
 	
 
@@ -573,42 +574,25 @@ void m_mult(pCTree ctree) {
 	ctree->children = malloc(sizeof(CTree)*l1.children_cnt);
 	
 
-	//CTree* n_children[2048];
-	n_children = malloc(l1.children_cnt*sizeof(pCTree));
+	//n_children = malloc(l1.children_cnt*sizeof(pCTree));
 
 	for(int i = 0; i < l1.children_cnt; i++) {
 
-		pCTree p = malloc(sizeof(CTree));
-		clone(p,&sum);
-/*
-		printf("type %d, %d\n",p->type,sum.type);
-		printf("n %d, %d\n",p->n,sum.n);
-		printf("cnt %d, %d\n",p->children_cnt,sum.children_cnt);
-		printf("child %d, %d\n",p->children,sum.children);
-*/
-
-		pCTree p2 = malloc(sizeof(CTree));
-		clone(p2,&(l1.children[i]));
-
-		CTree tr = m_or(*p2,*p);
-
-		
-/*
-		pCTree p;
- 		clone(p,&tr);
-		printCTree(p);
-*/
-		n_children[i] = &tr;
+		n_children[i] = &m_or(sum,l1.children[i]);
 
 		printf("i: %d\n",i);
-		printf("%ld\n",n_children[i]);
 		printCTree(n_children[i]);
 		printf("\n");
 	}
 
 		
 		printf("i: %d\n",0);
+		
+		printf("%ld\n",n_children[0]);
+		printf("%ld\n",n_children[1]);
 		printCTree(n_children[0]);
+		printf("\n");
+		printCTree(n_children[1]);
 		printf("\n");
 
 
@@ -649,8 +633,9 @@ CTree _multi(CTree a, CTree b) {
 	for(int i = 0; i < a.children_cnt; i++) {
 
 		for(int j = 0; j < b.children_cnt; j++) {
-
-			CTree ntree = m_or(a_child[i],b_child[j]);
+			pCTree p;
+			m_or(p,a_child[i],b_child[j]);
+			CTree ntree = *p;
 			children[size] = ntree;
 			size++;
 		}
@@ -660,53 +645,75 @@ CTree _multi(CTree a, CTree b) {
 	return tree;
 }
 
-CTree m_or(CTree a, CTree b) {
-
-
-	if((a.type == Or) && b.type == Or) {
+void m_or(pCTree new,CTree a, CTree b) {
+	if((a.type == b.type) && a.type == Or) {
 		
 		CTree children[1024];
 		int cnt = a.children_cnt + b.children_cnt;
 		int i;
 		for(i = 0; i < a.children_cnt; i++) {
-
-			children[i] = a.children[i];
+			
+			pCTree p = malloc(sizeof(CTree));
+			clone(p,&(a.children[i]));
+			children[i] = *p;
 		}
 		for(int j = 0; j < b.children_cnt; j++) {
 			
-			children[i+j] = b.children[j];
+			pCTree p = malloc(sizeof(CTree));
+			clone(p,&(b.children[j]));
+			children[i+j] = *p;
 		}
 
-		CTree ans = {Or,0,cnt,children};
-		return ans;
+	//	CTree ans = {Or,0,cnt,children};
+		
+		new->type = Or;
+		new->n = 0;
+		new->children_cnt = cnt;
+		new->children = children;
+
 		
 	} else {
-		CTree children[2] = {a,b};
-		CTree ans = {Or,0,2,children};
-		return ans;
+		pCTree p1 = malloc(sizeof(CTree));
+		pCTree p2 = malloc(sizeof(CTree));
+		clone(p1,&a);
+		clone(p2,&b);
+		CTree children[2] = {*p1,*p2};
+		//CTree ans = {Or,0,2,children};
+		new->type = Or;
+		new->n = 0;
+		new->children_cnt = 2;
+		new->children = children;
 	}
-	
 }
+
 CTree m_and(CTree a, CTree b) {
-	if(a.type == b.type == And) {
+	if((a.type == b.type) && a.type == And) {
 		
 		CTree children[1024];
 		int cnt = a.children_cnt + b.children_cnt;
 		int i;
 		for(i = 0; i < a.children_cnt; i++) {
-
-			children[i] = a.children[i];
+			
+			pCTree p = malloc(sizeof(CTree));
+			clone(p,&(a.children[i]));
+			children[i] = *p;
 		}
 		for(int j = 0; j < b.children_cnt; j++) {
 			
-			children[i+j] = b.children[j];
+			pCTree p = malloc(sizeof(CTree));
+			clone(p,&(b.children[j]));
+			children[i+j] = *p;
 		}
 
 		CTree ans = {And,0,cnt,children};
 		return ans;
 		
 	} else {
-		CTree children[2] = {a,b};
+		pCTree p1 = malloc(sizeof(CTree));
+		pCTree p2 = malloc(sizeof(CTree));
+		clone(p1,&a);
+		clone(p2,&b);
+		CTree children[2] = {*p1,*p2};
 		CTree ans = {And,0,2,children};
 		return ans;
 	}

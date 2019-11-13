@@ -54,7 +54,6 @@ pCTree _multi(pCTree a, pCTree b);
 void m_mult(pCTree ctree);
 
 pCTree m_or(pCTree a, pCTree b);
-pCTree m_and(pCTree a, pCTree b);
 
 char* _toBuffer(pCTree ctree);
 
@@ -76,20 +75,17 @@ int main() {
 		printf("%s\n",str);
 		printf("Tree : ");	
 		printCTree(ctree);
-		printf("\n\n");
 		
 		//printf("type: %d, n: %d, cnt %d\n",ctree->type,ctree->n,ctree->children_cnt);
 
 
 		downLevel_not(ctree);
-		printf("Down Not: ");	
+		printf("NNF: ");	
 		printCTree(ctree);
-		printf("\n");
 		asCNF(ctree);
 
 		printf("CNF: ");	
 		printCTree(ctree);
-		printf("\n");
 
 		printCNF(ctree);
 /*
@@ -306,7 +302,7 @@ pCTree asCTree(char* str) {
 */
 		pc->type = type;
 		pc->n = n;
-		pc->children_cnt = n;
+		pc->children_cnt = 0;
 		pc->children = malloc(sizeof(CTree*)*2048);
 
 	//	CTree ctree = {type, n, 0, 0x0};
@@ -554,40 +550,33 @@ char* toBuffer(pCTree ctree) {
 	return _toBuffer(ctree,str);
 }
 */
-
 char* _toBuffer(pCTree ctree) {
 
-
-	char buf[2048];
+	char buf[2048]="";
 	enum CType type = ctree->type;
 
-printf("type: %d\n",type);
-
 	if(type == Atom) {
-
 		sprintf(buf,"a%d",ctree->n);
-
-printf("buf: %s\n",buf);
-		return buf;
 	}
 
 	if(type != Atom) {
-
-		sprintf(buf,"%s", type == And? "(and " : type == Or? "(or ": type == Not? "(not " : "Error");
+		sprintf(buf,"%s", type == And? "(and " : type == Or? "(or ": "(not ");
 		for(int i = 0; i < ctree->children_cnt; i++)  {
-
-			char* temp = _toBuffer(ctree->children[i]);
-
-			//strcat(buf,temp);
-			sprintf(buf,"%s%s",buf,temp);
-			strcat(buf," ");
+/*
+printf("\n-  --- \n");
+printCTree(ctree->children[i]);
+printf("%dHello n: %d, cnt: %d, type: %d\n",i,ctree->children[i]->n,ctree->children[i]->children_cnt,ctree->children[i]->type);
+printf("--- -\n");
+*/
+			sprintf(buf,"%s%s",buf,_toBuffer(ctree->children[i]));
+			sprintf(buf,"%s ",buf);
 
 		}
 		buf[strlen(buf)-1] = ')';
-	//	strcat(buf,"\b)");
-printf("buf: %s\n",buf);
-		return buf;
+		buf[strlen(buf)] = '\0';
 	}
+
+	return buf;
 
 }
 void printCTree(pCTree ctree) {
@@ -657,9 +646,9 @@ void CNF(pCTree ctree) {
 	}
 }
 void m_mult(pCTree ctree) {
+/*	
 	printf("mult: ");
 	printCTree(ctree);
-/*	
 */
 	pCTree arr1[1024];
 	pCTree arr2[1024];
@@ -684,8 +673,9 @@ void m_mult(pCTree ctree) {
 			break;
 		
 		case And:
-//			printCTree(&ch);
+			//arr2[size2] = asCTree(_toBuffer(ch));
 			arr2[size2] = ch;
+			
 			size2++;
 		}
 
@@ -702,9 +692,13 @@ void m_mult(pCTree ctree) {
 		// arr2[i+1];
 
 		arr2[i+1] = _multi(arr2[i],arr2[i+1]);
+
+		printf("arr2[last]: "); //TODO: fix it
+		printCTree(arr2[i+1]); //TODO: remove it
 	}
 
 
+	
 
 	//printCTree(arr2[size2-1]);
 
@@ -714,13 +708,13 @@ void m_mult(pCTree ctree) {
 	for(int i = 1; i < size1; i++) {
 	
 		sum = m_or(sum,arr1[i]);
-		printf("sum%d: ",i);
-		printCTree(sum);
+		sum = asCTree(_toBuffer(sum));
 	}
 
 
-
 	pCTree l1 = arr2[size2-1];
+
+	
 
 	ctree->type = l1->type;
 	ctree->n = l1->n;
@@ -736,35 +730,13 @@ void m_mult(pCTree ctree) {
 	for(int i = 0; i < l1->children_cnt; i++) {
 /*		
 */
-		printf("** ** **\n");
-
-		printf("sum: ");
-		printCTree(sum);
-
-		printf("l: ");
-		printCTree(l1->children[i]);
-		pCTree tr = m_or(l1->children[i],sum);
-
-		
-		printf("tr: ");
-		printCTree(tr);
-		printf(": %s\n",_toBuffer(tr));
-
+		pCTree s = asCTree(_toBuffer(sum));
+		pCTree tr = m_or(l1->children[i],s);
 		children[i] = asCTree(_toBuffer(tr));
-		//children[i] = tr;
 
-		printf("ch%d: ",i);
-		printCTree(children[i]);
-/*		
-
-		printf("sum: ");
-		printCTree(sum);
-
-		printf("child[%d]: ",i);
-		printCTree(l1->children[i]);
-
+/*
 */
-		printf("** ** **\n\n");
+		
 
 		//printf("result: %d\n",ctree->children[i]->type);
 	}
@@ -778,7 +750,7 @@ void m_mult(pCTree ctree) {
 	ctree->children = children;
 
 	/*
-	printf("result: %ld",ctree->children);
+	printf("result: ");
 	printCTree(ctree);
 */
 }
@@ -787,17 +759,38 @@ pCTree _multi(pCTree a, pCTree b) {
 
 
 	int size = 0;
-
+/*
 	pCTree* a_child = a->children;
-	pCTree* b_child = a->children;
+	pCTree* b_child = b->children;
+*/
 
+
+	pCTree** a_child;
+	pCTree** b_child;
+
+	int a_cnt;
+	int b_cnt;
+
+	if(a->type == Atom || a->type == Not) {
+		a_child[0] = a;
+		a_cnt = 1;
+	} else {
+		a_child = a->children;
+		a_cnt = a->children_cnt;
+	}
+	
+	if(b->type == Atom || b->type == Not) {
+		b_child[0] = b;
+		b_cnt = 1;
+	} else {
+		b_child = b->children;
+		b_cnt = b->children_cnt;
+	}
 
 	pCTree children[2048];
 
-	for(int i = 0; i < a->children_cnt; i++) {
-
-		for(int j = 0; j < b->children_cnt; j++) {
-
+	for(int i = 0; i < a_cnt; i++) {
+		for(int j = 0; j < b_cnt; j++) {
 			pCTree ntree = m_or(a_child[i],b_child[j]);
 			children[size] = ntree;
 			size++;
@@ -812,13 +805,9 @@ pCTree _multi(pCTree a, pCTree b) {
 	pc->children_cnt = size;
 	pc->children = children;
 
-	printCTree(pc);
-
-	printf("LoHel!\n");
 
 	return pc;
 }
-
 pCTree m_or(pCTree a, pCTree b) {
 
 
@@ -834,8 +823,8 @@ pCTree m_or(pCTree a, pCTree b) {
 		for(int i = 0; i < b1->children_cnt; i++)
 			b1->children[i] = b->children[i];
 */
-		pCTree children[1024];
-		//pCTree* children = malloc(sizeof(pCTree)*1024);
+		//pCTree children[1024];
+		pCTree* children = malloc(sizeof(pCTree)*1024);
 		int cnt = a->children_cnt + b->children_cnt;
 		int i;
 		for(i = 0; i < a->children_cnt; i++) {
@@ -861,9 +850,9 @@ pCTree m_or(pCTree a, pCTree b) {
 			printCTree(&children[i]);
 			printf("\n");
 		}
-*/
 		printf("or: ");
 		printCTree(pc);
+*/
 		return pc;
 		
 	} 
@@ -912,7 +901,6 @@ pCTree m_or(pCTree a, pCTree b) {
 	}
 	
 }
-
 void downLevel_not(pCTree ctree) {
 /*
 	printf("Down: ");

@@ -1,0 +1,1 @@
+(and (and a1 a2) (and a3 a4))

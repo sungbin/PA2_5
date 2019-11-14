@@ -1,0 +1,1 @@
+(and (and a11 a12) (and a13 a14) (and a25 a26 a27))

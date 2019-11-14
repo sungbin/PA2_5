@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#define MAX_SIZE 4096
 
 enum CType {
 	Atom = 0,
@@ -41,61 +42,65 @@ pCTree asCTree(char* str);
 void _printCTree(pCTree ctree);
 void printCTree(pCTree ctree);
 
-void asCNF(pCTree ctree);
+void CNF(pCTree ctree);
 void printCNF(pCTree ctree);
-void _printCNF(pCTree ctree);
 
-void downLevel_not(pCTree ctree);
+void NNF(pCTree ctree);
 
 pCTree not(pCTree ctree) ;
-void CNF(pCTree ctree) ;
-pCTree _multi(pCTree a, pCTree b);
-
-void m_mult(pCTree ctree);
-
-pCTree m_or(pCTree a, pCTree b);
+void m_and(pCTree tree,pCTree a, pCTree b); 
+void m_or(pCTree tree,pCTree a, pCTree b); 
+void m_distr(pCTree tree,pCTree a, pCTree b);
+char *replaceAll(char *s, const char *olds, const char *news);
+char* _toCNF(pCTree ctree) ;
 
 char* _toBuffer(pCTree ctree);
 
-void clone(pCTree new,pCTree tree);
+char test1[2000] = "(or a7 (or a4 a3))";
+char test2[2000] = "(or (and (and (and (and (or a7 (or a4 a3)) (or a8 (or a4 a3))) (or a9 (or a4 a3))) (and (and (or a7 (or a5 a3)) (or a8 (or a5 a3))) (or a9 (or a5 a3)))) (and (and (or a7 (or a6 a3)) (or a8 (or a6 a3))) (or a9 (or a6 a3)))) (and (and (or a4 a3) (or a5 a3)) (or a6 a3)))";
+char test3[2000] = "a4";
 
-int malloc_cnt = 0;
+char test4[2000] = "(and (and (and (and (and (and (or (or a4 a3) (or a7 (or a4 a3))) (or (or a5 a3) (or a7 (or a4 a3)))) (or (or a6 a3) (or a7 (or a4 a3)))) (and (and (or (or a4 a3) (or a8 (or a4 a3))) (or (or a5 a3) (or a8 (or a4 a3)))) (or (or a6 a3) (or a8 (or a4 a3))))) (and (and (or (or a4 a3) (or a9 (or a4 a3))) (or (or a5 a3) (or a9 (or a4 a3)))) (or (or a6 a3) (or a9 (or a4 a3))))) (and (and (and (and (or (or a4 a3) (or a7 (or a5 a3))) (or (or a5 a3) (or a7 (or a5 a3)))) (or (or a6 a3) (or a7 (or a5 a3)))) (and (and (or (or a4 a3) (or a8 (or a5 a3))) (or (or a5 a3) (or a8 (or a5 a3)))) (or (or a6 a3) (or a8 (or a5 a3))))) (and (and (or (or a4 a3) (or a9 (or a5 a3))) (or (or a5 a3) (or a9 (or a5 a3)))) (or (or a6 a3) (or a9 (or a5 a3)))))) (and (and (and (and (or (or a4 a3) (or a7 (or a6 a3) (or (or a5 a3) (or a7 (or a6 a3)))) (or (or a6 a3) (or a7 (or a6 a3)))) (and (and (or (or a4 a3) (or a8 (or a6 a3))) (or (or a5 a3) (or a8 (or a6 a3)))) (or (or a6 a3) (or a8 (or a6 a3))))) (and (and (or (or a4 a3) (or a9 (or a6 a3))) (or (or a5 a3) (or a9 (or a6 a3)))) (or (or a6 a3) (or a9 (or a6 a3))))))";
+
 
 int main() {
 
-	char str[1024];
-	gets(str);
+	char str[MAX_SIZE];
+
+	//strcpy(str,test2);
+
+	fgets(str,MAX_SIZE,stdin);
+
+	bool option = false;
 
 	if(isRightForm(str)) {
 //		printf("It is CNF\n");
 
 		pCTree ctree = asCTree(str);
+		if(option) {
+			printf("Input: ");	
+			printf("%s\n",str);
+			printf("Tree : ");	
+			printCTree(ctree);
+		}
 
-		printf("Input: ");	
-		printf("%s\n",str);
-		printf("Tree : ");	
-		printCTree(ctree);
-		
-		//printf("type: %d, n: %d, cnt %d\n",ctree->type,ctree->n,ctree->children_cnt);
+		NNF(ctree);
+		if(option) {
+			printf("NNF: ");	
+			printCTree(ctree);
+		}
 
-
-		downLevel_not(ctree);
-		printf("NNF: ");	
-		printCTree(ctree);
-		asCNF(ctree);
-
-		printf("CNF: ");	
-		printCTree(ctree);
+		CNF(ctree);
+		if(option) {
+			printf("CNF: ");	
+			printCTree(ctree);
+		}
 
 		printCNF(ctree);
 /*
 */
 	}
-	else printf("Syntax error\n");
-
-	
-
-
+	else printf("ERROR: Not right propositional logic\n");
 
 	return 0;
 }
@@ -145,11 +150,13 @@ bool isRightForm(char* str) {
 		int strbuf_c = 0;
 		int depth = 1;
 
+		int len = strlen(str);
+
 		switch(type) {
 
 		case And:
 
-			for(int i = 5; i < strlen(str); i++) {
+			for(int i = 5; i < len; i++) {
 
 				if(str[i] == '(') {
 					depth++;
@@ -194,7 +201,7 @@ bool isRightForm(char* str) {
 				strbuf_c++;
 			}
 			
-			if(child_cnt < 1)
+			if(child_cnt < 2)
 				return false;
 
 			break;
@@ -202,7 +209,7 @@ bool isRightForm(char* str) {
 
 		case Or:
 
-			for(int i = 4; i < strlen(str); i++) {
+			for(int i = 4; i < len; i++) {
 
 				if(str[i] == '(') {
 					depth++;
@@ -245,7 +252,7 @@ bool isRightForm(char* str) {
 				strbuf[strbuf_c] = str[i];
 				strbuf_c++;
 			}
-			if(child_cnt < 1)
+			if(child_cnt < 2)
 				return false;
 
 			break;
@@ -287,8 +294,9 @@ bool isRightForm(char* str) {
 
 pCTree asCTree(char* str) {
 	enum CType type;
-
-	//printf("recur: '%s'\n",str);
+/*
+*/
+	//printf("asCTree: '%s'\n",str);
 
 	if(str[0] == 'a') {
 
@@ -296,21 +304,12 @@ pCTree asCTree(char* str) {
 		type = Atom;
 
 		pCTree pc = malloc(sizeof(CTree));
-/*
-		for(int i = 0; i < malloc_cnt; i++)
-			pc = malloc(sizeof(CTree));
-*/
 		pc->type = type;
 		pc->n = n;
 		pc->children_cnt = 0;
 		pc->children = malloc(sizeof(CTree*)*2048);
 
-	//	CTree ctree = {type, n, 0, 0x0};
-
-//		printf("n: %ld\n",pc);
-
 		return pc;
-		//return &ctree;
 	} else {
 
 		char buf[8];
@@ -337,7 +336,11 @@ pCTree asCTree(char* str) {
 		CTree** children;
 		children = malloc(sizeof(CTree*)*1024);
 
-		char s_children[1024][1024];
+//		char s_children[1024][1024];
+		char** s_children= malloc(sizeof(char*)*1024);		
+		for(int i = 0; i < 1024; i++) s_children[i] = malloc(sizeof(char)*1024);
+
+
 		int child_cnt = 0;
 
 				int len = strlen(str);
@@ -412,7 +415,6 @@ pCTree asCTree(char* str) {
 						strbuf[strbuf_c] = str[i];
 						strbuf[strbuf_c+1] = '\0';
 
-
 						strcpy(s_children[child_cnt],strbuf);
 						child_cnt++;
 
@@ -468,11 +470,8 @@ pCTree asCTree(char* str) {
 			pCTree* pchilds = malloc(sizeof(pCTree*)*1024);
 
 			pCTree pchild = asCTree(temp);
-//		printf("pchild: %ld\n",pchild);
 
 			pchilds[0] = pchild;
-
-//		printf("pchilds: %ld\n",pchilds);
 
 
 			pCTree pc = malloc(sizeof(CTree));
@@ -484,13 +483,9 @@ pCTree asCTree(char* str) {
 			pc->children = pchilds;
 
 
-//		printf("Not: %ld\n",pc);
-
 			return pc;
 			// break;
 		}
-
-		//CTree ctree = {type,0, child_cnt,0x0};
 
 
 		pCTree pc = malloc(sizeof(CTree));
@@ -499,42 +494,18 @@ pCTree asCTree(char* str) {
 		pc->children_cnt = child_cnt;
 		pc->children = malloc(sizeof(CTree*)*2048);
 
+		//printf("str: '%s'\n",str);
+		//printf("Trr: %s\n",_toBuffer(asCTree(str)));
+
 		for(int i = 0; i < child_cnt; i++) {
+		//	printf("%d: parse: '%s', %ld\n",i,s_children[i],s_children[i]);
 			pCTree t = asCTree(s_children[i]);
-
-//			printf("HEllo\n");
-
+		//	printf("%d: parse!\n",i);
 			pc->children[i] = t;
-/*
-			pc->children[i]->type = t->type;
-			pc->children[i]->n = t->n;
-			pc->children[i]->children_cnt = t->children_cnt;
-			pc->children[i]->children = t->children;
-*/
 			
 		}
-//		printf("\n\n");
-/*
-		char temp[2048] = "";
-		if(pc->type == And) {
-			sprintf(temp,"(and ");
-		} else if(pc->type == Or) {
-			sprintf(temp,"(or ");
-		}
-
-		for(int i = 0; i < child_cnt; i++) {
-
-			strcat(temp,s_children[i]);
-			strcat(temp," ");
-		}	
-*/		
-
-		// exit(1);	
-	
-		//pc->children = malloc(sizeof(pCTree)*1024);
 		
-//		for(int j = 0 ; j < pc->children_cnt; j++) pc->children = children;
-
+		//printCTree(pc);
 
 		return pc;
 
@@ -543,16 +514,19 @@ pCTree asCTree(char* str) {
 	return 0x0;
 
 }
-/*
-char* toBuffer(pCTree ctree) {
 
-	char str[2048];
-	return _toBuffer(ctree,str);
-}
-*/
+int dep = 0;
+
 char* _toBuffer(pCTree ctree) {
+/*
+	for(int i = 0; i < dep; i++)
+		printf("  ");
+	dep++;
 
-	char buf[2048]="";
+	printf("Buffer: ");
+	printCTree(ctree);
+*/
+	char* buf = malloc(sizeof(char)*2048);
 	enum CType type = ctree->type;
 
 	if(type == Atom) {
@@ -560,22 +534,48 @@ char* _toBuffer(pCTree ctree) {
 	}
 
 	if(type != Atom) {
+
+		if(ctree->children_cnt < 1) {
+			printf("Hello! %d t: %d\n",ctree->n,type);
+			exit(1);
+		}
+
 		sprintf(buf,"%s", type == And? "(and " : type == Or? "(or ": "(not ");
 		for(int i = 0; i < ctree->children_cnt; i++)  {
-/*
-printf("\n-  --- \n");
-printCTree(ctree->children[i]);
-printf("%dHello n: %d, cnt: %d, type: %d\n",i,ctree->children[i]->n,ctree->children[i]->children_cnt,ctree->children[i]->type);
-printf("--- -\n");
+	
+
+			sprintf(buf,"%s%s ",buf,_toBuffer(ctree->children[i]));
+/*	
+			char buf2[2048];
+			strcpy(buf2,_toBuffer(ctree->children[i]));
+			int len2 = strlen(buf2);
+
+			strcat(buf,buf2);
+			strcat(buf," ");
 */
-			sprintf(buf,"%s%s",buf,_toBuffer(ctree->children[i]));
-			sprintf(buf,"%s ",buf);
+			//int len = strlen(buf);
+			//snprintf(buf,"%s%s ",len+len2+1,buf,buf2);
+			//sprintf(buf,"%s ",buf);
 
 		}
-		buf[strlen(buf)-1] = ')';
-		buf[strlen(buf)] = '\0';
+		
+		int len = strlen(buf);
+		buf[len-1] = ')';
+		buf[len] = '\0';
+		
 	}
-
+/*
+	//printf("buf: %s\n",buf);
+	if(!isRightForm(buf)) {
+		printf("exit!\n");
+		printCTree(ctree);
+		exit(1);
+	}
+	dep--;
+	for(int i = 0; i < dep; i++)
+		printf("--");
+	printf("%s\n",buf);
+*/
 	return buf;
 
 }
@@ -604,18 +604,31 @@ void _printCTree(pCTree ctree) {
 	}
 
 }
-void asCNF(pCTree ctree) {
-
-
-	CNF(ctree);
-
-}
-
 void CNF(pCTree ctree) {
-/*
-	printf("CNF: ");
-	printCTree(ctree);
-*/
+
+	pCTree t = asCTree(_toBuffer(ctree));
+
+	ctree->type = t->type;
+	ctree->n = t->n;
+	ctree->children_cnt = t->children_cnt;
+	ctree->children = t->children;
+
+
+
+
+	pCTree* children = malloc(sizeof(pCTree)*1024);
+
+	int children_cnt = ctree->children_cnt;
+	if(!(ctree->type == Atom))
+	for(int i = 0; i < ctree->children_cnt; i++) {
+
+		char* buf = _toBuffer(ctree->children[i]);
+
+		children[i] = asCTree(buf);
+
+//		printCTree(children[i]);
+
+	}
 
 	switch(ctree->type) {
 
@@ -625,289 +638,179 @@ void CNF(pCTree ctree) {
 		return;
 
 	case And:
-		for(int i = 0; i < ctree->children_cnt; i++) {
 
-			pCTree pchild = ctree->children[i];
+		for(int i = 0; i < children_cnt; i++) {
+/*
+			printf("[%d] ",i);
+			
+			printCTree(children[i]);
+*/
+			CNF(children[i]);
 
-			CNF(pchild);
+/*
+			printf("befroe children CNF: ");
+			printCTree(ctree->children[i]);
+			printf("after children CNF: ");
+			printCTree(ctree);
+*/			
+		}
+/*
+		printf("Hello! \n");
+		printf("F And: ");
+		_printCNF(ctree->children[0]);
+		printf(", ");
+		_printCNF(ctree->children[1]);
+		printf("\n");
+		printf("result: ");
+		printCNF(ctree);
+*/
+
+		m_and(ctree,children[0],children[1]);
+
+		for(int i = 2; i < children_cnt; i++) {
+			m_and(ctree,ctree,children[i]);
 		}
 		return;
 
 	case Or:
-		for(int i = 0; i < ctree->children_cnt; i++) {
 
-			pCTree child = ctree->children[i];
-			CNF(child);
+		for(int i = 0; i < children_cnt; i++) {
+			CNF(children[i]);
 		}
-		
-		m_mult(ctree);
 
+		m_distr(ctree,children[0],children[1]);
+
+
+		for(int i = 2; i < children_cnt; i++) {
+			m_distr(ctree,ctree,children[i]);
+		}
 		return;
 	}
 }
-void m_mult(pCTree ctree) {
-/*	
-	printf("mult: ");
-	printCTree(ctree);
-*/
-	pCTree arr1[1024];
-	pCTree arr2[1024];
-	pCTree arr3[2048];
-	int size1 = 0, size2 = 0;
 
-	for(int i = 0; i < ctree->children_cnt; i++) {
-		pCTree ch = ctree->children[i];
-		switch(ch->type) {
-		
-		case Atom:
-		case Not:
-			arr1[size1] = ch;
-			size1++;
-			break;
-			
-		case Or:
-			for(int j = 0; j < ch->children_cnt; j++) {
-				arr1[size1] = ch->children[j];
-				size1++;
-			}
-			break;
-		
-		case And:
-			//arr2[size2] = asCTree(_toBuffer(ch));
-			arr2[size2] = ch;
-			
-			size2++;
-		}
-
-	}
-
-	if(size2<1) return;
-
-
-//	printf("size1: %d, size2: %d\n",size1,size2);
-
-	for(int i = 0; i < size2-1; i++) {
-
-		// arr2[i];
-		// arr2[i+1];
-
-		arr2[i+1] = _multi(arr2[i],arr2[i+1]);
-
-		printf("arr2[last]: "); //TODO: fix it
-		printCTree(arr2[i+1]); //TODO: remove it
-	}
-
-
-	
-
-	//printCTree(arr2[size2-1]);
-
-	pCTree sum = arr1[0];
-
-
-	for(int i = 1; i < size1; i++) {
-	
-		sum = m_or(sum,arr1[i]);
-		sum = asCTree(_toBuffer(sum));
-	}
-
-
-	pCTree l1 = arr2[size2-1];
-
-	
-
-	ctree->type = l1->type;
-	ctree->n = l1->n;
-	ctree->children_cnt = l1->children_cnt;
-	pCTree* children = malloc(sizeof(pCTree)*2048);
-/*	
-	printf("\nHello!\n");
-	printf("result: %ld\n",ctree->children);
-	
-
-	printf("*children: %ld\n",children);
-*/
-	for(int i = 0; i < l1->children_cnt; i++) {
-/*		
-*/
-		pCTree s = asCTree(_toBuffer(sum));
-		pCTree tr = m_or(l1->children[i],s);
-		children[i] = asCTree(_toBuffer(tr));
-
+void m_and(pCTree tree,pCTree a, pCTree b) { 
 /*
-*/
-		
 
-		//printf("result: %d\n",ctree->children[i]->type);
-	}
-
-/*	printf("children*: %ld\n",children);
-	for(int i = 0; i < l1->children_cnt; i++) {
-		printf("%d: ",i);
-		printCTree(children[i]);
-	}
-*/
-	ctree->children = children;
-
-	/*
-	printf("result: ");
-	printCTree(ctree);
-*/
-}
-
-pCTree _multi(pCTree a, pCTree b) {
-
-
-	int size = 0;
-/*
-	pCTree* a_child = a->children;
-	pCTree* b_child = b->children;
-*/
-
-
-	pCTree** a_child;
-	pCTree** b_child;
-
-	int a_cnt;
-	int b_cnt;
-
-	if(a->type == Atom || a->type == Not) {
-		a_child[0] = a;
-		a_cnt = 1;
-	} else {
-		a_child = a->children;
-		a_cnt = a->children_cnt;
-	}
-	
-	if(b->type == Atom || b->type == Not) {
-		b_child[0] = b;
-		b_cnt = 1;
-	} else {
-		b_child = b->children;
-		b_cnt = b->children_cnt;
-	}
-
-	pCTree children[2048];
-
-	for(int i = 0; i < a_cnt; i++) {
-		for(int j = 0; j < b_cnt; j++) {
-			pCTree ntree = m_or(a_child[i],b_child[j]);
-			children[size] = ntree;
-			size++;
-		}
-	}
-
-//	CTree tree = {And,0,size,children};
-	
-	pCTree pc = malloc(sizeof(CTree));
-	pc->type = And;
-	pc->n = 0;
-	pc->children_cnt = size;
-	pc->children = children;
-
-
-	return pc;
-}
-pCTree m_or(pCTree a, pCTree b) {
-
-
-	if((a->type == Or) && b->type == a->type) {
-		pCTree a1 = asCTree(_toBuffer(a));
-		pCTree b1 = asCTree(_toBuffer(b));
-		//pCTree a1 = a;
-		//pCTree b1 = b;
-/*
-		for(int i = 0; i < a1->children_cnt; i++)
-			a1->children[i] = a->children[i];
-
-		for(int i = 0; i < b1->children_cnt; i++)
-			b1->children[i] = b->children[i];
-*/
-		//pCTree children[1024];
-		pCTree* children = malloc(sizeof(pCTree)*1024);
-		int cnt = a->children_cnt + b->children_cnt;
-		int i;
-		for(i = 0; i < a->children_cnt; i++) {
-
-			children[i] = a1->children[i];
-		}
-		for(int j = 0; j < b->children_cnt; j++) {
-			
-			children[a->children_cnt+j] = b1->children[j];
-		}
-
-//		CTree ans = {Or,0,cnt,children};
-		
-		pCTree pc = malloc(sizeof(CTree));
-		pc->type = Or;
-		pc->n = 0;
-		pc->children_cnt = cnt;
-		pc->children = children;
-		
-/*
-		for(int i = 0; i < cnt; i++) {
-			printf("i: %d\n",i);
-			printCTree(&children[i]);
-			printf("\n");
-		}
-		printf("or: ");
-		printCTree(pc);
-*/
-		return pc;
-		
-	} 
-	else if(a->type == Or && (b->type == Atom || b->type == Not)) {
-
-		pCTree children[1024];
-		for(int i = 0; i < a->children_cnt; i++)
-			children[i] = a->children[i];
-		children[a->children_cnt] = b;
-
-	
-		pCTree pc = malloc(sizeof(CTree));
-		pc->type = a->type;
-		pc->n = a->n;
-		pc->children_cnt = a->children_cnt+1;
-		pc->children = children;
-
-		return pc;
-	}
-	else if(b->type == Or && (a->type == Atom || a->type == Not)) {
-
-		pCTree children[1024];
-		for(int i = 0; i < b->children_cnt; i++)
-			children[i] = b->children[i];
-		children[b->children_cnt] = a;
-
-		pCTree pc = malloc(sizeof(CTree));
-		pc->type = b->type;
-		pc->n = b->n;
-		pc->children_cnt = b->children_cnt+1;
-		pc->children = children;
-
-		return pc;
-	}
-	else {
-		pCTree children[2] = {a,b};
-		
-		pCTree pc = malloc(sizeof(CTree));
-		pc->type = Or;
-		pc->n = 0;
-		pc->children_cnt = 2;
-		pc->children = children;
-
-		//pCTree ans = {Or,0,2,children};
-		return pc;
-	}
-	
-}
-void downLevel_not(pCTree ctree) {
-/*
-	printf("Down: ");
-	printCTree(ctree);
+	printf("And: ");
+	_printCTree(a);
+	printf(", ");
+	_printCTree(b);
 	printf("\n");
+	pCTree a1 = a;
+	pCTree b1 = b;
 */
+	pCTree a1 = asCTree(_toBuffer(a));
+	pCTree b1 = asCTree(_toBuffer(b));
+
+	pCTree* children = malloc(sizeof(pCTree)*2);
+	children[0] = a1;
+	children[1] = b1;
 	
+	tree->type = And;
+	tree->n = 0;
+	tree->children_cnt = 2;
+	tree->children = children;
+	
+//	printCTree(tree);
+}
+void m_or(pCTree tree,pCTree a, pCTree b) { 
+	pCTree a1 = asCTree(_toBuffer(a));
+	pCTree b1 = asCTree(_toBuffer(b));
+
+	//pCTree a1 = a;
+	//pCTree b1 = b;
+
+	pCTree* children = malloc(sizeof(pCTree)*2);
+	children[0] = a1;
+	children[1] = b1;
+	
+	tree->type = Or;
+	tree->n = 0;
+	tree->children_cnt = 2;
+	tree->children = children;
+}
+
+int dis_dep = 0;
+	
+void m_distr(pCTree tree,pCTree a, pCTree b) {
+	
+	a = asCTree(_toBuffer(a));
+	b = asCTree(_toBuffer(b));
+/*
+	pCTree t2 = tree;
+
+	printf("dis(");
+	_printCTree(a);
+	printf(", ");
+	_printCTree(b);
+	printf(" \n");
+
+
+
+
+
+
+	for(int i = 0; i < dis_dep; i++) {
+		printf("  ");
+	}
+	dis_dep++;
+
+	printf("Distr: ");
+	_printCTree(a);
+	printf(", ");
+	printCTree(b);
+*/	
+	if(a->type == And) {
+		for(int i = 0; i < a->children_cnt; i++) {
+			m_distr(a->children[i],a->children[i],b);
+		}
+
+		m_and(tree,a->children[0],a->children[1]);
+		for(int i = 2; i < a->children_cnt; i++) {
+			m_and(tree,tree,a->children[i]);
+		}
+
+	} else if(b->type == And) {
+		for(int i = 0; i < b->children_cnt; i++) {
+			m_distr(b->children[i],b->children[i],a);
+		}
+
+		m_and(tree,b->children[0],b->children[1]);
+		for(int i = 2; i < b->children_cnt; i++) {
+			m_and(tree,tree,b->children[i]);
+		}
+	} else {
+		m_or(tree,a,b);
+	}
+
+	//tree->children_cnt = 2;
+
+/*
+	dis_dep--;
+	for(int i = 0; i < dis_dep; i++) {
+		printf("  ");
+	}
+	char buf[2048];
+	strcpy(buf,_toBuffer(tree));
+
+	pCTree new = asCTree(buf);
+	t2->type = new->type;
+	t2->n = new->n;
+	t2->children_cnt = new->n;
+	t2->children = new->children;
+	printf("%d: buf: '%s'\n",t2->children_cnt,buf);
+
+	printCTree(new);
+
+	if(!isRightForm(buf)) {
+		printf("exit!\n");
+		exit(1);
+	}
+
+*/
+
+}
+void NNF(pCTree ctree) {
 
 	pCTree child;
 
@@ -921,7 +824,7 @@ void downLevel_not(pCTree ctree) {
 
 		
 		for(int i = 0; i < ctree->children_cnt; i++) {
-			downLevel_not(ctree->children[i]);
+			NNF(ctree->children[i]);
 		}
 		return;
 
@@ -949,7 +852,7 @@ void downLevel_not(pCTree ctree) {
 			}
 
 
-			downLevel_not(ctree);
+			NNF(ctree);
 
 			return;
 
@@ -971,7 +874,7 @@ void downLevel_not(pCTree ctree) {
 
 			}
 
-			downLevel_not(ctree);
+			NNF(ctree);
 
 			break;
 		
@@ -993,7 +896,7 @@ void downLevel_not(pCTree ctree) {
 
 			}
 
-			downLevel_not(ctree);
+			NNF(ctree);
 
 			break;
 		
@@ -1017,38 +920,82 @@ pCTree not(pCTree ctree) {
 
 void printCNF(pCTree ctree) {
 
-	_printCNF(ctree);
-	printf("\n");
+	char* str = _toCNF(ctree);
+	int len = strlen(str);
+	str[len] = '\n';
+	str[len+1] = '\0';
+
+	
+	char* str2 = replaceAll(str,"\n\n","\n");
+
+	while(strlen(str) != strlen(str2)) {
+		str = str2;
+		str2 = replaceAll(str2,"\n\n","\n");
+	}
+
+
+	printf("%s",str);
 }
-void _printCNF(pCTree ctree) {
-/*
-	printf("%d",ctree->type);
-	printf("\nHello!\n");
-*/	
+
+char* _toCNF(pCTree ctree) {
+
+	char buf[2048] = "";
 
 	switch(ctree->type) {
 
 	case Atom:
-		printf("%d",ctree->n);
-		return;
+		sprintf(buf,"%d",ctree->n);
+		return buf;
 
 	case Not:
-		printf("-%d",ctree->children[0]->n);
-		return;
+		sprintf(buf,"-%d",ctree->children[0]->n);
+		return buf;
 
 	case Or:
 		for(int i = 0; i < ctree->children_cnt; i++) {
-			_printCNF(ctree->children[i]);
-			printf(" ");
+			sprintf(buf,"%s%s ",buf,_toCNF(ctree->children[i]));
 		}
-		printf("\b");
-		return;
+		buf[strlen(buf)-1] = '\0';
+		return buf;
 
 	case And:
 		
 		for(int i = 0; i < ctree->children_cnt; i++) {
-			_printCNF(ctree->children[i]);
-			printf("\n");
+			sprintf(buf,"%s%s\n",buf,_toCNF(ctree->children[i]));
 		}
+		return buf;
 	}
+}
+
+
+char *replaceAll(char *s, const char *olds, const char *news) {
+  char *result, *sr;
+  size_t i, count = 0;
+  size_t oldlen = strlen(olds); if (oldlen < 1) return s;
+  size_t newlen = strlen(news);
+
+
+  if (newlen != oldlen) {
+    for (i = 0; s[i] != '\0';) {
+      if (memcmp(&s[i], olds, oldlen) == 0) count++, i += oldlen;
+      else i++;
+    }
+  } else i = strlen(s);
+
+
+  result = (char *) malloc(i + 1 + count * (newlen - oldlen));
+  if (result == NULL) return NULL;
+
+
+  sr = result;
+  while (*s) {
+    if (memcmp(s, olds, oldlen) == 0) {
+      memcpy(sr, news, newlen);
+      sr += newlen;
+      s  += oldlen;
+    } else *sr++ = *s++;
+  }
+  *sr = '\0';
+
+  return result;
 }

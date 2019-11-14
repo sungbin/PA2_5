@@ -18,22 +18,6 @@ struct _CTree {
 	struct _CTree **children;
 };
 
-struct _Module {
-	int* arr;
-	int size;
-};
-
-typedef struct _Module Module;
-typedef Module *pModule;
-
-struct _ModuleList {
-	pModule modules;
-	int size;
-};
-
-typedef struct _ModuleList ModuleList;
-typedef ModuleList *pModuleList;
-
 typedef struct _CTree CTree;
 typedef CTree *pCTree;
 
@@ -43,9 +27,7 @@ void _printCTree(pCTree ctree);
 void printCTree(pCTree ctree);
 
 void CNF(pCTree ctree);
-
 void printCNF(pCTree ctree);
-
 void NNF(pCTree ctree);
 
 pCTree not(pCTree ctree) ;
@@ -56,14 +38,13 @@ char *replaceAll(char *s, const char *olds, const char *news);
 void _toCNF(char* result, pCTree ctree);
 
 char* _toBuffer(pCTree ctree);
-
 int main() {
 
 	char str[MAX_SIZE];
 
 	fgets(str,MAX_SIZE,stdin);
 
-	bool option = true;
+	bool option = false;
 
 	if(isRightForm(str)) {
 //		printf("It is CNF\n");

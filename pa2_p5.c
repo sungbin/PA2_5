@@ -43,6 +43,7 @@ void _printCTree(pCTree ctree);
 void printCTree(pCTree ctree);
 
 void CNF(pCTree ctree);
+
 void printCNF(pCTree ctree);
 
 void NNF(pCTree ctree);
@@ -52,26 +53,17 @@ void m_and(pCTree tree,pCTree a, pCTree b);
 void m_or(pCTree tree,pCTree a, pCTree b); 
 void m_distr(pCTree tree,pCTree a, pCTree b);
 char *replaceAll(char *s, const char *olds, const char *news);
-char* _toCNF(pCTree ctree) ;
+void _toCNF(char* result, pCTree ctree);
 
 char* _toBuffer(pCTree ctree);
-
-char test1[2000] = "(or a7 (or a4 a3))";
-char test2[2000] = "(or (and (and (and (and (or a7 (or a4 a3)) (or a8 (or a4 a3))) (or a9 (or a4 a3))) (and (and (or a7 (or a5 a3)) (or a8 (or a5 a3))) (or a9 (or a5 a3)))) (and (and (or a7 (or a6 a3)) (or a8 (or a6 a3))) (or a9 (or a6 a3)))) (and (and (or a4 a3) (or a5 a3)) (or a6 a3)))";
-char test3[2000] = "a4";
-
-char test4[2000] = "(and (and (and (and (and (and (or (or a4 a3) (or a7 (or a4 a3))) (or (or a5 a3) (or a7 (or a4 a3)))) (or (or a6 a3) (or a7 (or a4 a3)))) (and (and (or (or a4 a3) (or a8 (or a4 a3))) (or (or a5 a3) (or a8 (or a4 a3)))) (or (or a6 a3) (or a8 (or a4 a3))))) (and (and (or (or a4 a3) (or a9 (or a4 a3))) (or (or a5 a3) (or a9 (or a4 a3)))) (or (or a6 a3) (or a9 (or a4 a3))))) (and (and (and (and (or (or a4 a3) (or a7 (or a5 a3))) (or (or a5 a3) (or a7 (or a5 a3)))) (or (or a6 a3) (or a7 (or a5 a3)))) (and (and (or (or a4 a3) (or a8 (or a5 a3))) (or (or a5 a3) (or a8 (or a5 a3)))) (or (or a6 a3) (or a8 (or a5 a3))))) (and (and (or (or a4 a3) (or a9 (or a5 a3))) (or (or a5 a3) (or a9 (or a5 a3)))) (or (or a6 a3) (or a9 (or a5 a3)))))) (and (and (and (and (or (or a4 a3) (or a7 (or a6 a3) (or (or a5 a3) (or a7 (or a6 a3)))) (or (or a6 a3) (or a7 (or a6 a3)))) (and (and (or (or a4 a3) (or a8 (or a6 a3))) (or (or a5 a3) (or a8 (or a6 a3)))) (or (or a6 a3) (or a8 (or a6 a3))))) (and (and (or (or a4 a3) (or a9 (or a6 a3))) (or (or a5 a3) (or a9 (or a6 a3)))) (or (or a6 a3) (or a9 (or a6 a3))))))";
-
 
 int main() {
 
 	char str[MAX_SIZE];
 
-	//strcpy(str,test2);
-
 	fgets(str,MAX_SIZE,stdin);
 
-	bool option = false;
+	bool option = true;
 
 	if(isRightForm(str)) {
 //		printf("It is CNF\n");
@@ -919,13 +911,14 @@ pCTree not(pCTree ctree) {
 }
 
 void printCNF(pCTree ctree) {
+	char* str = malloc(sizeof(char)*2048);
 
-	char* str = _toCNF(ctree);
+	_toCNF(str,ctree);
 	int len = strlen(str);
+
 	str[len] = '\n';
 	str[len+1] = '\0';
 
-	
 	char* str2 = replaceAll(str,"\n\n","\n");
 
 	while(strlen(str) != strlen(str2)) {
@@ -933,37 +926,43 @@ void printCNF(pCTree ctree) {
 		str2 = replaceAll(str2,"\n\n","\n");
 	}
 
-
 	printf("%s",str);
 }
 
-char* _toCNF(pCTree ctree) {
-
+void _toCNF(char* result, pCTree ctree) {
 	char buf[2048] = "";
 
 	switch(ctree->type) {
 
 	case Atom:
 		sprintf(buf,"%d",ctree->n);
-		return buf;
+		strcpy(result,buf);
+		return;
 
 	case Not:
 		sprintf(buf,"-%d",ctree->children[0]->n);
-		return buf;
+		strcpy(result,buf);
+		return;
 
 	case Or:
 		for(int i = 0; i < ctree->children_cnt; i++) {
-			sprintf(buf,"%s%s ",buf,_toCNF(ctree->children[i]));
+			char* temp = malloc(sizeof(char)*2048);
+			_toCNF(temp,ctree->children[i]);
+			sprintf(buf,"%s%s ",buf,temp);
 		}
 		buf[strlen(buf)-1] = '\0';
-		return buf;
+		strcpy(result,buf);
+		return;
 
 	case And:
 		
 		for(int i = 0; i < ctree->children_cnt; i++) {
-			sprintf(buf,"%s%s\n",buf,_toCNF(ctree->children[i]));
+			char* temp = malloc(sizeof(char)*2048);
+			_toCNF(temp,ctree->children[i]);
+			sprintf(buf,"%s%s\n",buf,temp);
 		}
-		return buf;
+		strcpy(result,buf);
+		return;
 	}
 }
 

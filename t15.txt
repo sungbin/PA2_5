@@ -1,1 +1,0 @@
-(and (and (and (and (or a7 (or a4 a3)) (or a8 (or a4 a3))) (or a9 (or a4 a3))) (and (and (or a7 (or a5 a3)) (or a8 (or a5 a3))) (or a9 (or a5 a3)))) (and (and (or a7 (or a6 a3)) (or a8 (or a6 a3))) (or a9 (or a6 a3))))

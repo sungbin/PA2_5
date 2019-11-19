@@ -26,8 +26,8 @@ pCTree asCTree(char* str);
 void _printCTree(pCTree ctree);
 void printCTree(pCTree ctree);
 
-void CNF(pCTree ctree);
-void printCNF(pCTree ctree);
+void DNF(pCTree ctree);
+void printDNF(pCTree ctree);
 void NNF(pCTree ctree);
 
 pCTree not(pCTree ctree) ;
@@ -35,19 +35,32 @@ void m_and(pCTree tree,pCTree a, pCTree b);
 void m_or(pCTree tree,pCTree a, pCTree b); 
 void m_distr(pCTree tree,pCTree a, pCTree b);
 char *replaceAll(char *s, const char *olds, const char *news);
-void _toCNF(char* result, pCTree ctree);
+void _toDNF(char* result, pCTree ctree);
 
 char* _toBuffer(pCTree ctree);
+
+void printAnswer(pCTree ctree);
+
+void check_first(int arr[], pCTree ctree);
+
+bool first = true;
+char* first_line;
+
+bool* arr;
+int max = 0;
+int min = 10000;
+
 int main() {
 
 	char str[MAX_SIZE];
+	arr = malloc(sizeof(bool)*MAX_SIZE);
 
 	fgets(str,MAX_SIZE,stdin);
 
-	bool option = true;
+	bool option = false;
 
 	if(isRightForm(str)) {
-//		printf("It is CNF\n");
+//		printf("It is DNF\n");
 
 		pCTree ctree = asCTree(str);
 		if(option) {
@@ -63,13 +76,19 @@ int main() {
 			printCTree(ctree);
 		}
 
-		CNF(ctree);
+		DNF(ctree);
 		if(option) {
-			printf("CNF: ");	
+			printf("DNF: ");	
 			printCTree(ctree);
 		}
 
-//		printCNF(ctree);
+		
+
+		printDNF(ctree);
+		printf("0\n");
+
+		printAnswer(ctree);
+
 /*
 */
 	}
@@ -85,6 +104,12 @@ bool isRightForm(char* str) {
 
 	if(str[0] == 'a') {
 		int n = atoi(str+1);
+
+		if(n > max) max = n;
+		if(n < min) min = n;
+
+		arr[n] = true;
+
 		type = Atom;
 		return n > 0;
 	} else {
@@ -539,7 +564,7 @@ void _printCTree(pCTree ctree) {
 	}
 
 }
-void CNF(pCTree ctree) {
+void DNF(pCTree ctree) {
 
 	pCTree t = asCTree(_toBuffer(ctree));
 
@@ -547,9 +572,6 @@ void CNF(pCTree ctree) {
 	ctree->n = t->n;
 	ctree->children_cnt = t->children_cnt;
 	ctree->children = t->children;
-
-
-
 
 	pCTree* children = malloc(sizeof(pCTree)*1024);
 
@@ -572,7 +594,7 @@ void CNF(pCTree ctree) {
 	case Or:
 
 		for(int i = 0; i < children_cnt; i++) {
-			CNF(children[i]);
+			DNF(children[i]);
 
 		}
 
@@ -589,7 +611,7 @@ void CNF(pCTree ctree) {
 	//case Or:
 
 		for(int i = 0; i < children_cnt; i++) {
-			CNF(children[i]);
+			DNF(children[i]);
 		}
 
 		m_distr(ctree,children[0],children[1]);
@@ -637,23 +659,27 @@ void m_distr(pCTree tree,pCTree a, pCTree b) {
 	a = asCTree(_toBuffer(a));
 	b = asCTree(_toBuffer(b));
 
-	if(a->type == And) {
+	//if(a->type == And) {
+	if(a->type == Or) {
 		for(int i = 0; i < a->children_cnt; i++) {
 			m_distr(a->children[i],a->children[i],b);
 		}
 
-		m_and(tree,a->children[0],a->children[1]);
+		//m_and(tree,a->children[0],a->children[1]);
+		m_or(tree,a->children[0],a->children[1]);
 		for(int i = 2; i < a->children_cnt; i++) {
 			//m_and(tree,tree,a->children[i]);
 			m_or(tree,tree,a->children[i]);
 		}
 
-	} else if(b->type == And) {
+	//} else if(b->type == And) {
+	} else if(b->type == Or) {
 		for(int i = 0; i < b->children_cnt; i++) {
 			m_distr(b->children[i],b->children[i],a);
 		}
 
-		m_and(tree,b->children[0],b->children[1]);
+		//m_and(tree,b->children[0],b->children[1]);
+		m_or(tree,b->children[0],b->children[1]);
 		for(int i = 2; i < b->children_cnt; i++) {
 			m_or(tree,tree,b->children[i]);
 			//m_and(tree,tree,b->children[i]);
@@ -773,10 +799,11 @@ pCTree not(pCTree ctree) {
 	return new_ctree;
 }
 
-void printCNF(pCTree ctree) {
+
+void printDNF(pCTree ctree) {
 	char* str = malloc(sizeof(char)*2048);
 
-	_toCNF(str,ctree);
+	_toDNF(str,ctree);
 	int len = strlen(str);
 
 	str[len] = '\n';
@@ -789,10 +816,42 @@ void printCNF(pCTree ctree) {
 		str2 = replaceAll(str2,"\n\n","\n");
 	}
 
+	if(first) {
+		first_line = malloc(sizeof(char)*MAX_SIZE);
+		//printf("f_line: %s\n",first_line);
+		first = false;
+		strcpy(first_line,str);
+	}
+
 	printf("%s",str);
 }
 
-void _toCNF(char* result, pCTree ctree) {
+void check_first(int arr[], pCTree ctree) {
+
+	switch(ctree->type) {
+
+	case Atom:
+		arr[ctree->n] = 1;
+		return;
+
+	case Not:
+		arr[ctree->children[0]->n] = -1;
+		return;
+
+	case Or:
+		for(int i = 0; i < ctree->children_cnt; i++) {
+			check_first(arr,ctree->children[i]);
+		}
+		return;
+	case And:
+		for(int i = 0; i < ctree->children_cnt; i++) {
+			check_first(arr,ctree->children[i]);
+		}
+		return;
+	}
+}
+
+void _toDNF(char* result, pCTree ctree) {
 	char buf[2048] = "";
 
 	switch(ctree->type) {
@@ -809,26 +868,34 @@ void _toCNF(char* result, pCTree ctree) {
 
 	case Or:
 		for(int i = 0; i < ctree->children_cnt; i++) {
+
 			char* temp = malloc(sizeof(char)*2048);
-			_toCNF(temp,ctree->children[i]);
-			sprintf(buf,"%s%s ",buf,temp);
+			_toDNF(temp,ctree->children[i]);
+			sprintf(buf,"%s%s\n",buf,temp);
+
+			if(first) {
+				
+				first_line = malloc(sizeof(char)*MAX_SIZE);
+				strcpy(first_line,buf);
+				first = false;
+			}
 		}
-		buf[strlen(buf)-1] = '\0';
+
 		strcpy(result,buf);
 		return;
-
 	case And:
-		
 		for(int i = 0; i < ctree->children_cnt; i++) {
+
 			char* temp = malloc(sizeof(char)*2048);
-			_toCNF(temp,ctree->children[i]);
-			sprintf(buf,"%s%s\n",buf,temp);
+			_toDNF(temp,ctree->children[i]);
+			sprintf(buf,"%s%s ",buf,temp);
 		}
+
+		buf[strlen(buf)-1] = '\0';
 		strcpy(result,buf);
 		return;
 	}
 }
-
 
 char *replaceAll(char *s, const char *olds, const char *news) {
   char *result, *sr;
@@ -861,3 +928,66 @@ char *replaceAll(char *s, const char *olds, const char *news) {
 
   return result;
 }
+void printAnswer(pCTree ctree) {
+//max,min,arr
+
+	bool lst[MAX_SIZE];
+	if(!first) {	
+	
+		//printf("first!\n");
+
+		first_line[strlen(first_line)-1] = '\0';
+		printf("%s ",first_line);
+
+
+		char* ptr = strtok(first_line," ");
+
+		while(ptr != NULL) {
+
+			int n = atoi(ptr);
+			ptr = strtok(NULL, " ");
+
+			if(n < 0) n *= -1;
+	
+			lst[n] = true;
+
+		}
+
+	}
+
+	int numbers[MAX_SIZE];
+	int size = 0;
+
+	for(int i = min; i <= max; i++) {
+		if(arr[i]) {
+			numbers[size] = i;
+			size++;
+		}
+	}
+
+	
+	for(int i = 0; i < size; i++) {
+		int n = numbers[i];
+
+		if(!lst[n])
+			printf("%d ",n);
+		
+	}
+	printf("\n");
+
+/*
+
+	if(ctree->children_cnt > 1) {
+		set_first_on(ctree->children[0],firstList,size);
+	} else {
+		 set_first_on(ctree,firstList,size);
+	}
+
+
+	printf("\n");
+*/	
+
+}
+//void set_first_on(pCtree first, int firstLst[]) {
+
+//}

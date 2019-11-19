@@ -50,6 +50,8 @@ bool* arr;
 int max = 0;
 int min = 10000;
 
+char answer[MAX_SIZE];
+
 int main() {
 
 	char str[MAX_SIZE];
@@ -92,7 +94,7 @@ int main() {
 /*
 */
 	}
-	else printf("UNSET\n");
+	else printf("ERROR: Long Propositional Formula\n");
 
 	return 0;
 }
@@ -823,7 +825,8 @@ void printDNF(pCTree ctree) {
 		strcpy(first_line,str);
 	}
 
-	printf("%s",str);
+	printf("%s",str); //TODO: remove it for testing!
+	strcpy(answer,str);
 }
 
 void check_first(int arr[], pCTree ctree) {
@@ -930,64 +933,71 @@ char *replaceAll(char *s, const char *olds, const char *news) {
 }
 void printAnswer(pCTree ctree) {
 //max,min,arr
+	char answers[300][MAX_SIZE];
+        int solution[300][MAX_SIZE];
 
-	bool lst[MAX_SIZE];
-	if(!first) {	
-	
-		//printf("first!\n");
+	bool first = false;
+	char ans[MAX_SIZE];
 
-		first_line[strlen(first_line)-1] = '\0';
-		printf("%s ",first_line);
+        int size = 0;
+
+                char* ptr = strtok(answer,"\n");
+
+                while(ptr != NULL) {
+
+                        strcpy(answers[size],ptr);
+
+			//printf("line: %s\n",answers[size]);
+
+			if(!first) {
+				strcpy(ans,ptr);
+				first = true;
+			}
 
 
-		char* ptr = strtok(first_line," ");
+                        size++;
+                        ptr = strtok(NULL, "\n");
+
+                }   
+
+
+        for(int i = 0; i < size; i++) {
+
+		int l_size = 1;
+
+                char* ptr = strtok(answers[i]," ");
 
 		while(ptr != NULL) {
 
 			int n = atoi(ptr);
-			ptr = strtok(NULL, " ");
 
-			if(n < 0) n *= -1;
-	
-			lst[n] = true;
+               		solution[i][l_size] = n;
 
+			l_size++;
+
+			solution[i][0] = l_size;
+
+                        ptr = strtok(NULL, " ");
 		}
 
-	}
+		solution[i][0] = l_size;
+        }   
 
-	int numbers[MAX_SIZE];
-	int size = 0;
+        for(int i = 0; i < size; i++) {
+                for(int j = 1; j < solution[i][0]; j++) {
 
-	for(int i = min; i <= max; i++) {
-		if(arr[i]) {
-			numbers[size] = i;
-			size++;
-		}
-	}
+                        int n = solution[i][j];
 
-	
-	for(int i = 0; i < size; i++) {
-		int n = numbers[i];
+			for(int k = 1; k < j; k++) {
+				int n2 = solution[i][k];
+				if(n == (n2 * -1)) {
+					printf("UNSAT\n");
+					return;
+				}
+			}
 
-		if(!lst[n])
-			printf("%d ",n);
-		
-	}
-	printf("\n");
-
-/*
-
-	if(ctree->children_cnt > 1) {
-		set_first_on(ctree->children[0],firstList,size);
-	} else {
-		 set_first_on(ctree,firstList,size);
-	}
-
-
-	printf("\n");
-*/	
+                }   
+        }
+	printf("%s\n",ans);
 
 }
-//void set_first_on(pCtree first, int firstLst[]) {
-
-//}

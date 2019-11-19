@@ -1,7 +1,7 @@
-all: CNF
+all: DNF
 
-CNF: CNF_convert.c
-	gcc -o CNF CNF_convert.c
+DNF: DNF_converter.c 
+	gcc -o DNF DNF_converter.c 
 
 clean:
-	rm -rf CNF
+	rm -rf DNF

@@ -92,7 +92,7 @@ int main() {
 /*
 */
 	}
-	else printf("ERROR: Not right propositional logic\n");
+	else printf("UNSET\n");
 
 	return 0;
 }

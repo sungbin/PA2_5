@@ -8,7 +8,6 @@
 
 ## Example
 
-<code> ./DNF
-  
-(or (not (and (or a2 a3) a1)) (not (or (not (or a1 a2)) a3 (and a4 a5))))
-</code>
+<code> ./DNF </code>
+<br>
+<code>(or (not (and (or a2 a3) a1)) (not (or (not (or a1 a2)) a3 (and a4 a5))))</code>
